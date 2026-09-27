@@ -1,100 +1,312 @@
----
-title: Manage different app versions
-sidebar_title: Manage app versions
-description: Learn about developer-facing and user-facing app versions and how EAS Build automatically manages developer-facing versions.
-hasVideoLink: true
----
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Modal, SafeAreaView, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import { Collapsible } from '~/ui/components/Collapsible';
-import { ProgressTracker } from '~/ui/components/ProgressTracker';
-import { Terminal } from '~/ui/components/Snippet';
-import { VideoBoxLink } from '~/ui/components/VideoBoxLink';
+// PALETA DE IDENTIDAD VISUAL (Tonos pasteles, crema y lila)
+const colors = {
+  crema: '#FDFBF7',
+  rosa: '#FADCD9',
+  lila: '#E8DFF5',
+  texto: '#2D2D2D',
+  gris: '#9E9E9E',
+  acento: '#D84361',
+  blanco: '#FFFFFF'
+};
 
-In this chapter, we'll learn how EAS Build automatically manages the developer-facing app version for Android and iOS. Learning about it will be useful before we dive into production build in the next two chapters.
+export default function App() {
+  const [screen, setScreen] = useState('splash'); // splash, home, chat, catalogo, ajustes, perfil
+  const [modalCrear, setModalCrear] = useState(false);
+  const [modalEstilos, setModalEstilos] = useState(false);
+  const [estilosActivos, setEstilosActivos] = useState(['Mi Momento', 'Acuarela']);
+  
+  // Estado del Chat
+  const [mensajeTexto, setMensajeTexto] = useState('');
+  const [mensajes, setMensajes] = useState([
+    { id: '1', remitente: 'usuario', texto: 'Necesito la portada de febrero para la agenda.' },
+    { id: '2', remitente: 'ia', texto: '¡Listo! Aquí tienes la portada para febrero.' }
+  ]);
 
-<VideoBoxLink
-  videoId="C8x4N9UmzS8"
-  title="Watch: Automating app version code"
-  description="Understand developer-facing and user-facing app versions and how EAS Build automates version management for you."
-/>
+  const scrollViewRef = useRef();
 
----
-
-## Understanding developer-facing and user-facing app versions
-
-An app version is composed of two values:
-
-- Developer-facing value: Represented by [`versionCode`](/versions/latest/config/app/#versioncode) for Android and [`buildNumber`](/versions/latest/config/app/#buildnumber) for iOS.
-- User-facing value: Represented by [`version`](/versions/latest/config/app/#version) **app.config.js**.
-
-Both Google Play Store and Apple App Store rely on developer-facing values to identify each unique build. For example, if we upload an app with the app version `1.0.0 (1)` (which is a combination of user-facing and developer-facing values), we cannot submit another build to the app stores with the same app version. Submitting builds with duplicate app version numbers results in a failed submission.
-
-An example demonstration of manually managing developer-facing values is shown below by `android.versionCode` and `ios.buildNumber` in **app.config.js**. **We don't have to add or manage these values manually since EAS Build automates this for us**.
-
-```js app.config.js
-{
-  ios: {
-    buildNumber: 1
-    /* @hide ... */ /* @end */
-  },
-  android: {
-    versionCode: 1
-  }
-  /* @hide ... */ /* @end */
-}
-```
-
-> **Note**: The [user-facing version number](/build-reference/app-versions/#user-facing-version) is not handled by EAS. Instead, we define that in the app store developer portals before submitting our production app for review.
-
-## Automatic app version management with EAS Build
-
-By default, EAS Build assists in automating developer-facing values. It utilizes the [remote version source](/build-reference/app-versions/#remote-version-source) to automatically increment developer-facing values whenever a new production release is made.
-
-When we initialized the project with `eas init` command, the EAS CLI automatically added the following properties in **eas.json**:
-
-- `cli.appVersionSource` which is set to `remote`
-- [`build.production.autoIncrement`](/eas/json/#autoincrement-1) which is set to `true`
-
-You can view them in your project's **eas.json**:
-
-{/* prettier-ignore */}
-```json eas.json
-{
-  "cli": {
-    /* @hide ... */ /* @end */
-    /* @info The `appVersionSource` is set to `remote`. */
-    "appVersionSource": "remote"
-    /* @end */
-  },
-  "build": {
-    "production": {
-      /* @info The `autoIncrement` is set `true` to automatically increment the `versionCode` or `buildNumber`. */
-      "autoIncrement": true
-      /* @end */
+  // Simulador de Splash Screen (Pantalla 1)
+  useEffect(() => {
+    if (screen === 'splash') {
+      const timer = setTimeout(() => setScreen('home'), 2500);
+      return () => clearTimeout(timer);
     }
+  }, [screen]);
+
+  const toggleEstilo = (estilo) => {
+    if (estilosActivos.includes(estilo)) {
+      setEstilosActivos(estilosActivos.filter(e => e !== estilo));
+    } else {
+      setEstilosActivos([...estilosActivos, estilo]);
+    }
+  };
+
+  const enviarMensaje = () => {
+    if (mensajeTexto.trim() === '') return;
+    const nuevoMsg = { id: Date.now().toString(), remitente: 'usuario', texto: mensajeTexto };
+    setMensajes(prev => [...prev, nuevoMsg]);
+    setMensajeTexto('');
+
+    setTimeout(() => {
+      const respuestaIA = {
+        id: (Date.now() + 1).toString(),
+        remitente: 'ia',
+        texto: '¡Excelente elección! Generando tu solicitud con los estilos seleccionados. ✨'
+      };
+      setMensajes(prev => [...prev, respuestaIA]);
+    }, 1000);
+  };
+
+  // 1. PANTALLA DE INICIO (SPLASH)
+  if (screen === 'splash') {
+    return (
+      <View style={[styles.container, styles.center, { backgroundColor: colors.crema }]}>
+        <Text style={styles.logoSplash}>Creando ando</Text>
+        <Text style={styles.subSplash}>Donde tus ideas se convierten en realidad</Text>
+      </View>
+    );
   }
-  /* @hide ... */ /* @end */
+
+  // 2. PANTALLA PRINCIPAL (Lista de Proyectos)
+  if (screen === 'home') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.titleNav}>Creando ando ✨</Text>
+          <View style={{ flexDirection: 'row', gap: 15 }}>
+            <Ionicons name="search" size={24} color={colors.texto} />
+            <TouchableOpacity onPress={() => setScreen('ajustes')}>
+              <Ionicons name="ellipsis-vertical" size={24} color={colors.texto} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <ScrollView style={{ padding: 20 }}>
+          <Text style={styles.seccionTitulo}>Recientes</Text>
+          
+          {/* Proyecto 1: Mi Momento */}
+          <TouchableOpacity style={styles.proyectoItem} onPress={() => setScreen('chat')}>
+            <View style={[styles.avatarProyecto, { backgroundColor: colors.rosa }]}>
+              <Ionicons name="book" size={22} color={colors.acento} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.proyectoNombre}>Mi Momento 2027</Text>
+              <Text style={styles.proyectoDetalle}>Agendas • Bienestar • Metas</Text>
+            </View>
+            <Text style={styles.proyectoFecha}>Hoy 📌</Text>
+          </TouchableOpacity>
+
+          {/* Proyecto 2: Sabrina Alisados */}
+          <TouchableOpacity style={styles.proyectoItem} onPress={() => setScreen('chat')}>
+            <View style={[styles.avatarProyecto, { backgroundColor: colors.lila }]}>
+              <Ionicons name="color-palette" size={22} color={colors.texto} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.proyectoNombre}>Sabrina Alisados</Text>
+              <Text style={styles.proyectoDetalle}>Redes • Promos • Contenido</Text>
+            </View>
+            <Text style={styles.proyectoFecha}>Dom</Text>
+          </TouchableOpacity>
+
+          {/* Proyecto 3: Avatariza */}
+          <TouchableOpacity style={styles.proyectoItem} onPress={() => setScreen('chat')}>
+            <View style={[styles.avatarProyecto, { backgroundColor: colors.rosa }]}>
+              <Ionicons name="person" size={22} color={colors.acento} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.proyectoNombre}>Avatariza</Text>
+              <Text style={styles.proyectoDetalle}>Avatares • Packs • Stickers</Text>
+            </View>
+            <Text style={styles.proyectoFecha}>Lun</Text>
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* Botón flotante para abrir el menú de creación (Pantalla 3) */}
+        <TouchableOpacity style={styles.fab} onPress={() => setModalCrear(true)}>
+          <Ionicons name="sparkles" size={28} color={colors.texto} />
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  // 4. PANTALLA DE CHAT / PROYECTO
+  if (screen === 'chat') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => setScreen('home')}>
+            <Ionicons name="arrow-back" size={24} color={colors.texto} />
+          </TouchableOpacity>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.title}>Mi Momento 2027</Text>
+            <Text style={{ fontSize: 11, color: colors.gris }}>Agendas • Bienestar • Metas</Text>
+          </View>
+          <TouchableOpacity onPress={() => setModalEstilos(true)}>
+            <Ionicons name="color-wand-outline" size={24} color={colors.acento} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.chatBody} ref={scrollViewRef}>
+          <View style={{ alignItems: 'center', marginVertical: 10 }}>
+            <Text style={{ fontSize: 12, color: colors.gris }}>Creando Ando AI • 10:25</Text>
+          </View>
+          
+          {mensajes.map((msg) => (
+            <View key={msg.id} style={msg.remitente === 'ia' ? styles.burbujaIA : styles.burbujaUsuario}>
+              <Text style={styles.textoBurbuja}>{msg.texto}</Text>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Píldoras de estilos activos */}
+        {estilosActivos.length > 0 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.estilosBar}>
+            {estilosActivos.map(est => (
+              <View key={est} style={styles.pildora}>
+                <Text style={{ fontSize: 11, color: colors.texto }}>✨ {est}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
+
+        {/* Barra de Input */}
+        <View style={styles.inputContainer}>
+          <Ionicons name="attach" size={24} color={colors.gris} />
+          <TextInput 
+            style={styles.input}
+            placeholder="Escribe un mensaje..."
+            placeholderTextColor={colors.gris}
+            value={mensajeTexto}
+            onChangeText={setMensajeTexto}
+          />
+          <TouchableOpacity onPress={() => setModalEstilos(true)}>
+            <Ionicons name="color-palette" size={24} color={estilosActivos.length ? colors.acento : colors.gris} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={enviarMensaje} style={{ marginLeft: 8 }}>
+            <Ionicons name="send" size={22} color={colors.acento} />
+          </TouchableOpacity>
+        </View>
+
+        {/* MODAL: Menú Flotante de Creación (Pantalla 3) */}
+        <Modal visible={modalCrear} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.bottomSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Crear</Text>
+                <TouchableOpacity onPress={() => setModalCrear(false)}>
+                  <Ionicons name="close" size={24} color={colors.texto} />
+                </TouchableOpacity>
+              </View>
+              
+              {[
+                { icon: 'folder', title: 'Nuevo Proyecto', desc: 'Organiza tu idea' },
+                { icon: 'person', title: 'Crear Avatar', desc: 'Diseña tu avatar' },
+                { icon: 'videocam', title: 'Crear Video', desc: 'Genera un video' },
+                { icon: 'image', title: 'Crear Escena', desc: 'Imagen o ambiente' },
+                { icon: 'calendar', title: 'Crear Agenda', desc: 'Diseña tu agenda' }
+              ].map((item, idx) => (
+                <TouchableOpacity key={idx} style={styles.opcionMenu} onPress={() => setModalCrear(false)}>
+                  <View style={styles.iconoMenuContainer}><Ionicons name={item.icon} size={20} color={colors.acento} /></View>
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ fontWeight: 'bold', color: colors.texto }}>{item.title}</Text>
+                    <Text style={{ fontSize: 12, color: colors.gris }}>{item.desc}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.gris} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </Modal>
+
+        {/* MODAL: Panel de Estilos (Pantalla 5) */}
+        <Modal visible={modalEstilos} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.bottomSheet}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>✨ Estilos</Text>
+                <TouchableOpacity onPress={() => setModalEstilos(false)}>
+                  <Ionicons name="close" size={24} color={colors.texto} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: 'bold', color: colors.gris, marginBottom: 10 }}>Mis estilos</Text>
+              <View style={styles.gridEstilos}>
+                {['Mi Momento', 'Modo Aventura', 'Sabrina Alisados', 'Avatariza'].map((est) => (
+                  <TouchableOpacity 
+                    key={est} 
+                    style={[styles.chipEstilo, estilosActivos.includes(est) && styles.chipActivo]}
+                    onPress={() => toggleEstilo(est)}
+                  >
+                    <Text style={{ fontSize: 12, textAlign: 'center', color: colors.texto }}>{est}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      </SafeAreaView>
+    );
+  }
+
+  // 8. PANTALLA DE AJUSTES (Opcional rápida integrada)
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => setScreen('home')}>
+          <Ionicons name="arrow-back" size={24} color={colors.texto} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Ajustes</Text>
+        <View style={{ width: 24 }} />
+      </View>
+      <ScrollView style={{ padding: 20 }}>
+        <TouchableOpacity style={styles.opcionMenu} onPress={() => setScreen('home')}>
+          <Ionicons name="person-outline" size={22} color={colors.texto} />
+          <Text style={{ flex: 1, marginLeft: 15, fontSize: 16, color: colors.texto }}>Perfil y Cuenta</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.gris} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.opcionMenu} onPress={() => setScreen('home')}>
+          <Ionicons name="color-palette-outline" size={22} color={colors.texto} />
+          <Text style={{ flex: 1, marginLeft: 15, fontSize: 16, color: colors.texto }}>Temas y Fondos</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.gris} />
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
 }
-```
 
-When we create a new production build in the next two chapters, the `versionCode` for Android and `buildNumber` for iOS will increment automatically.
-
-<Collapsible summary="Syncing developer-facing app versions for already published apps to EAS">
-
-If your app is already published in the app stores, the developer-facing app versions are already set. When migrating this app to use EAS Build, follow the steps below to sync those app versions:
-
-- In the terminal window, run the `eas build:version:set` command:
-
-<Terminal cmd={['$ eas build:version:set']} />
-
-- Select the platform (Android or iOS) when prompted.
-- When prompted **Do you want to set app version source to remote now?**, select **yes**. This will set the `cli.appVersionSource` to `remote` in **eas.json**.
-- When prompted **What version would you like to initialize it with?**, enter the last version number that you have set in the app stores.
-
-After these steps, the app versions will be synced to EAS Build remotely. You can set `build.production.autoIncrement` to `true` in **eas.json**. When you create a new production build, the `versionCode` and `buildNumber` will be automatically incremented from now on.
-
-</Collapsible>
-
-## Summary
-
-<ProgressTracker name="EAS_TUTORIAL" currentChapterSlug="/tutorial/eas/manage-app-versions" />
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.crema },
+  center: { justifyContent: 'center', alignItems: 'center' },
+  logoSplash: { fontSize: 36, fontWeight: 'bold', color: colors.acento, letterSpacing: 1 },
+  subSplash: { fontSize: 14, color: colors.gris, marginTop: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 35, backgroundColor: colors.crema },
+  titleNav: { fontSize: 22, fontWeight: 'bold', color: colors.acento },
+  title: { fontSize: 18, fontWeight: 'bold', color: colors.texto },
+  seccionTitulo: { fontSize: 15, fontWeight: '600', color: colors.gris, marginBottom: 15 },
+  proyectoItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.blanco, padding: 12, borderRadius: 16, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2, elevation: 2 },
+  avatarProyecto: { width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+  proyectoNombre: { fontSize: 15, fontWeight: 'bold', color: colors.texto },
+  proyectoDetalle: { fontSize: 12, color: colors.gris, marginTop: 2 },
+  proyectoFecha: { fontSize: 12, color: colors.gris },
+  fab: { position: 'absolute', bottom: 30, right: 20, width: 60, height: 60, borderRadius: 30, backgroundColor: colors.rosa, justifyContent: 'center', alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2 },
+  chatBody: { flex: 1, padding: 15 },
+  burbujaIA: { backgroundColor: colors.lila, padding: 14, borderRadius: 18, borderBottomLeftRadius: 4, alignSelf: 'flex-start', maxWidth: '80%', marginBottom: 12 },
+  burbujaUsuario: { backgroundColor: colors.rosa, padding: 14, borderRadius: 18, borderBottomRightRadius: 4, alignSelf: 'flex-end', maxWidth: '80%', marginBottom: 12 },
+  textoBurbuja: { fontSize: 15, color: colors.texto },
+  estilosBar: { paddingHorizontal: 15, paddingBottom: 8, maxHeight: 35 },
+  pildora: { backgroundColor: colors.lila, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginRight: 6 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', padding: 10, paddingHorizontal: 15, backgroundColor: colors.blanco, borderTopWidth: 1, borderColor: '#F0F0F0' },
+  input: { flex: 1, height: 40, backgroundColor: colors.crema, borderRadius: 20, paddingHorizontal: 15, marginHorizontal: 8, color: colors.texto },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.3)' },
+  bottomSheet: { backgroundColor: colors.blanco, padding: 20, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.texto },
+  opcionMenu: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#F5F5F5' },
+  iconoMenuContainer: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.rosa, justifyContent: 'center', alignItems: 'center' },
+  gridEstilos: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  chipEstilo: { width: '47%'.replace('%', ''), backgroundColor: colors.crema, padding: 12, borderRadius: 14, borderWidth: 1, borderColor: '#EFEFEF' },
+  chipActivo: { backgroundColor: colors.rosa, borderColor: colors.acento }
+});
